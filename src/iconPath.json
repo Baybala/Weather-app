@@ -1,0 +1,12 @@
+{
+  "Snow_d": "./images/Snow_d.png",
+  "Snow_n": "./images/Snow_n.png",
+  "Rain_d": "./images/Rain_d.png",
+  "Rain_n": "./images/Rain_n.png",
+  "Thunderstorm_d": "./images/Thunderstorm_d.png",
+  "Thunderstorm_n": "./images/Thunderstorm_n.png",
+  "Clear_d": "./images/Clear_d.png",
+  "Clear_n": "./images/Clear_n.png",
+  "Clouds_d": "./images/Clouds_d.png",
+  "Clouds_n": "./images/Clouds_n.png"
+}

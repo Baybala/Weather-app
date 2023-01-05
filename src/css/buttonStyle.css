@@ -1,0 +1,16 @@
+.buttons {
+  margin: 0 12px;
+  border-radius: 15px;
+  /* background-color: rgba(175, 213, 242, 0.178); */
+  background-color: rgba(175, 213, 242, 0.178);
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  cursor: pointer;
+}
+
+.buttons:hover {
+  background-color: rgb(151, 198, 238);
+}
+
+.icomImg {
+  width: 50px;
+}
