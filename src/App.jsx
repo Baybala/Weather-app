@@ -1,19 +1,21 @@
-import React, { Component } from 'react'
-import './App.css'
-import 'bootstrap/dist/css/bootstrap.min.css'
+import React, { useState, useEffect, Suspense } from 'react'
 import axios from 'axios'
 import dataExtract from './dataExtract'
 import fiveDayDataExtract from './fiveDayData'
+import { ToastContainer, toast } from 'react-toastify'
 import locationData from './extractLocData'
 import DisplayLocation from './component/displayLocation'
 import Search from './component/search'
 import MainIconDisplay from './component/mainIconDisplay'
-import DetailedData from './component/detailedData'
+// import DetailedData from './component/detailedData'
 import DisplayButtons from './component/displayButtons'
-import { ToastContainer, toast } from 'react-toastify'
+import Chart from './component/chart'
 
 import 'react-toastify/dist/ReactToastify.css'
-import Chart from './component/chart'
+import 'bootstrap/dist/css/bootstrap.min.css'
+import './App.css'
+
+const DetailedData = React.lazy(() => import('./component/detailedData'))
 
 axios.interceptors.response.use(null, (error) => {
   const unexpErr = error.response && error.response.status >= 200
@@ -24,43 +26,39 @@ axios.interceptors.response.use(null, (error) => {
   return Promise.reject(error)
 })
 
-class App extends Component {
-  state = {
-    location: {
-      city: 'Baku',
-      country: 'AZ',
-      lat: '',
-      lon: '',
-    },
+function Apps() {
+  const [location, setLocation] = useState({
+    city: 'Baku',
+    country: 'AZ',
+    lat: '',
+    lon: '',
+  })
 
-    extractedData: '',
+  const [extractedData, extractData] = useState('')
+  const [fiveDayData, extractFiveDateData] = useState('')
+  const [date, setDate] = useState(new Date())
 
-    date: new Date(),
+  const searchInput = React.createRef()
 
-    fiveDayData: '',
-  }
-
-  searchInput = React.createRef()
-
-  async componentDidMount() {
+  useEffect(() => {
     try {
-      const { data: locData } = await axios.get(
-        `http://api.openweathermap.org/data/2.5/forecast?lat=40.37&lon=49.83&appid=83ce2730c09f1d570400c729326561e4`,
-      )
-
-      const extractedData = dataExtract(locData)
-      const fiveDayData = fiveDayDataExtract(locData)
-      this.setState({ extractedData, fiveDayData })
+      const fetchData = async () => {
+        const { data: locData } = await axios.get(
+          `http://api.openweathermap.org/data/2.5/forecast?lat=40.37&lon=49.83&appid=83ce2730c09f1d570400c729326561e4`,
+        )
+        extractData(dataExtract(locData))
+        extractFiveDateData(fiveDayDataExtract(locData))
+      }
+      fetchData()
     } catch (ex) {
       if (ex.response && ex.response.status === 401) {
         toast('There is problem with API key')
       }
     }
-  }
+  }, [])
 
-  handleSearchSubmit = async (date) => {
-    const inputValue =
-      this.searchInput.current.value || this.state.location.city
+  const handleSearchSubmit = async (date) => {
+    const inputValue = searchInput.current.value || location.city
 
     const isDateString = typeof date === 'string'
 
@@ -70,19 +68,23 @@ class App extends Component {
           `http://api.openweathermap.org/geo/1.0/direct?q=${inputValue}&limit=1&appid=83ce2730c09f1d570400c729326561e4`,
         )
 
+        console.log(locData)
+
         if (locData.length > 0) {
           const location = locationData(locData)
           const { data } = await axios.get(
             `http://api.openweathermap.org/data/2.5/forecast?lat=${location.lat}&lon=${location.lon}&appid=83ce2730c09f1d570400c729326561e4`,
           )
 
-          const fiveDayData = fiveDayDataExtract(data)
+          extractFiveDateData(fiveDayDataExtract(data))
           const extractedData = isDateString
             ? dataExtract(data, new Date(date))
             : dataExtract(data)
           const d_t = isDateString ? date : new Date()
 
-          this.setState({ location, extractedData, fiveDayData, date: d_t })
+          setLocation(locationData(locData))
+          extractData(extractedData)
+          setDate(d_t)
         }
       } catch (ex) {
         if (ex.response && ex.response.status === 401) {
@@ -92,10 +94,8 @@ class App extends Component {
     }
   }
 
-  render() {
-    const { location, extractedData, fiveDayData, date } = this.state
-
-    return (
+  return (
+    <Suspense fallback={<h1>Loading profile...</h1>}>
       <div
         className="window"
         style={{
@@ -111,22 +111,19 @@ class App extends Component {
 
           <div className="row" style={{ height: '50px' }}>
             <DisplayLocation loc={location && location} date={date} />
-            <Search
-              inputRef={this.searchInput}
-              onClicked={this.handleSearchSubmit}
-            />
+            <Search inputRef={searchInput} onClicked={handleSearchSubmit} />
           </div>
 
           <div className="row">
-            <MainIconDisplay
-              mainIcon={
-                this.state.extractedData[0] &&
-                this.state.extractedData[0].mainIcon
-              }
-              temp={extractedData && extractedData[0].maxTem}
-              date={date}
-              fiveDayData={fiveDayData}
-            />
+            {extractedData && (
+              <MainIconDisplay
+                mainIcon={extractedData[0].mainIcon}
+                temp={extractedData[0].maxTem}
+                date={date}
+                fiveDayData={fiveDayData}
+              />
+            )}
+
             {extractedData && <DetailedData data={extractedData} />}
           </div>
 
@@ -137,14 +134,14 @@ class App extends Component {
             <DisplayButtons
               data={fiveDayData}
               date={date}
-              clicked={this.handleSearchSubmit}
+              clicked={handleSearchSubmit}
             />
             <Chart data={fiveDayData} />
           </div>
         </div>
       </div>
-    )
-  }
+    </Suspense>
+  )
 }
 
-export default App
+export default Apps
