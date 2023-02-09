@@ -3,7 +3,6 @@ import iconData from './iconPath.json'
 //extract data from given API at the given date
 
 const dataExtract = (data, date = new Date()) => {
-  console.log(data)
   const selectedByDate = getDataBySelectedDate(data, date)
   const retData = []
 

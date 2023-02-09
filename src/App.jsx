@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 import dataExtract from './dataExtract'
 import fiveDayDataExtract from './fiveDayData'
@@ -7,140 +7,121 @@ import locationData from './extractLocData'
 import DisplayLocation from './component/displayLocation'
 import Search from './component/search'
 import MainIconDisplay from './component/mainIconDisplay'
-// import DetailedData from './component/detailedData'
+import DetailedData from './component/detailedData'
 import DisplayButtons from './component/displayButtons'
 import Chart from './component/chart'
-
+import _ from 'lodash'
 import 'react-toastify/dist/ReactToastify.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import './App.css'
-
-const DetailedData = React.lazy(() => import('./component/detailedData'))
+import apiEndpoint from './apiEndpoint'
 
 axios.interceptors.response.use(null, (error) => {
-  const unexpErr = error.response && error.response.status >= 200
-  if (!unexpErr) {
+  const expErr = error.response && error.response.status >= 200
+  if (!expErr) {
+    console.log(error, 'Unexpected Error')
     toast('An unexpected error accured')
   }
-  console.log(unexpErr)
   return Promise.reject(error)
 })
 
 function Apps() {
-  const [location, setLocation] = useState({
+  const [locationFromAPI, setLocationFromAPI] = useState(null)
+  const [mainData, setMainData] = useState('')
+  const [dataByDate, setDataByDate] = useState('')
+  const [date, setDate] = useState(new Date())
+  const [locationDisplayData, setLoactionDisplayData] = useState(null)
+
+  let location = {
     city: 'Baku',
     country: 'AZ',
-    lat: '',
-    lon: '',
-  })
-
-  const [extractedData, extractData] = useState('')
-  const [fiveDayData, extractFiveDateData] = useState('')
-  const [date, setDate] = useState(new Date())
-
-  const searchInput = React.createRef()
+    lat: '40.37',
+    lon: '49.83',
+  }
 
   useEffect(() => {
-    try {
-      const fetchData = async () => {
-        const { data: locData } = await axios.get(
-          `http://api.openweathermap.org/data/2.5/forecast?lat=40.37&lon=49.83&appid=83ce2730c09f1d570400c729326561e4`,
-        )
-        extractData(dataExtract(locData))
-        extractFiveDateData(fiveDayDataExtract(locData))
-      }
-      fetchData()
-    } catch (ex) {
-      if (ex.response && ex.response.status === 401) {
-        toast('There is problem with API key')
-      }
-    }
+    fetchData(location.lat, location.lon)
+    setLocationFromAPI(location)
+    setLoactionDisplayData(location)
   }, [])
 
-  const handleSearchSubmit = async (date) => {
-    const inputValue = searchInput.current.value || location.city
+  const handleChange = useMemo(
+    () =>
+      _.debounce(async (e) => {
+        e.target.value && setLocationFromAPI(await locationData(e.target.value))
+      }, 300),
+    [],
+  )
 
-    const isDateString = typeof date === 'string'
+  const handleKeyDown = (e, date) => {
+    let isDateString = typeof date === 'string'
 
-    if (inputValue) {
-      try {
-        const { data: locData } = await axios.get(
-          `http://api.openweathermap.org/geo/1.0/direct?q=${inputValue}&limit=1&appid=83ce2730c09f1d570400c729326561e4`,
-        )
+    if (e.key === 'Enter' || isDateString) {
+      if (!locationFromAPI) return
 
-        console.log(locData)
-
-        if (locData.length > 0) {
-          const location = locationData(locData)
-          const { data } = await axios.get(
-            `http://api.openweathermap.org/data/2.5/forecast?lat=${location.lat}&lon=${location.lon}&appid=83ce2730c09f1d570400c729326561e4`,
-          )
-
-          extractFiveDateData(fiveDayDataExtract(data))
-          const extractedData = isDateString
-            ? dataExtract(data, new Date(date))
-            : dataExtract(data)
-          const d_t = isDateString ? date : new Date()
-
-          setLocation(locationData(locData))
-          extractData(extractedData)
-          setDate(d_t)
-        }
-      } catch (ex) {
-        if (ex.response && ex.response.status === 401) {
-          toast('There is problem with API key')
-        }
-      }
+      location = locationFromAPI
+      setLoactionDisplayData(locationFromAPI)
+      fetchData(location.lat, location.lon, isDateString, date)
     }
   }
 
+  async function fetchData(lat, lon, dateCheck, date) {
+    const { data: locData } = await apiEndpoint(null, lat, lon)
+    setDataByDate(fiveDayDataExtract(locData))
+    const extractedData = dateCheck
+      ? dataExtract(locData, new Date(date))
+      : dataExtract(locData)
+    const d_t = dateCheck ? date : new Date()
+    setMainData(extractedData)
+    setDate(d_t)
+  }
+
   return (
-    <Suspense fallback={<h1>Loading profile...</h1>}>
+    <div
+      className="window"
+      style={{
+        backgroundImage: `url(${mainData && mainData[0].main})`,
+      }}
+    >
       <div
-        className="window"
-        style={{
-          backgroundImage: `url(${extractedData && extractedData[0].main})`,
-        }}
+        style={{ margin: 'auto', width: '70%', padding: '10px' }}
+        className="container"
       >
-        <div
-          style={{ margin: 'auto', width: '70%', padding: '10px' }}
-          className="container"
-        >
-          <ToastContainer />
-          <div style={{ fontSize: '50px' }}>Weather</div>
+        <ToastContainer position="top-center" theme="dark" />
+        <div style={{ fontSize: '50px' }}>Weather</div>
 
-          <div className="row" style={{ height: '50px' }}>
-            <DisplayLocation loc={location && location} date={date} />
-            <Search inputRef={searchInput} onClicked={handleSearchSubmit} />
-          </div>
-
+        <div className="row" style={{ height: '50px' }}>
+          {locationDisplayData && (
+            <DisplayLocation loc={locationDisplayData} date={date} />
+          )}
+          <Search onChange={handleChange} onKeyDown={handleKeyDown} />
+        </div>
+        {mainData && (
           <div className="row">
-            {extractedData && (
-              <MainIconDisplay
-                mainIcon={extractedData[0].mainIcon}
-                temp={extractedData[0].maxTem}
-                date={date}
-                fiveDayData={fiveDayData}
-              />
-            )}
-
-            {extractedData && <DetailedData data={extractedData} />}
-          </div>
-
-          <div
-            className="row"
-            style={{ textAlign: 'center', width: '80%', margin: 'auto' }}
-          >
-            <DisplayButtons
-              data={fiveDayData}
+            <MainIconDisplay
+              mainIcon={mainData[0].mainIcon}
+              temp={mainData[0].maxTem}
+              location={location && location}
               date={date}
-              clicked={handleSearchSubmit}
+              fiveDayData={dataByDate}
             />
-            <Chart data={fiveDayData} />
+            <DetailedData data={mainData} />
           </div>
+        )}
+
+        <div
+          className="row"
+          style={{ textAlign: 'center', width: '80%', margin: 'auto' }}
+        >
+          <DisplayButtons
+            data={dataByDate}
+            date={date}
+            clicked={handleKeyDown}
+          />
+          {dataByDate && <Chart data={dataByDate} />}
         </div>
       </div>
-    </Suspense>
+    </div>
   )
 }
 

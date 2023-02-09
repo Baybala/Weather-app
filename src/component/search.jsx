@@ -1,18 +1,19 @@
-const Search = ({ inputRef, onClicked }) => {
+const Search = ({ onChange, onKeyDown }) => {
   return (
     <div className="input-group col" style={{ height: '10px' }}>
       <input
-        ref={inputRef}
         type="text"
         className="form-control"
         placeholder="Search by city name..."
+        onChange={onChange}
+        onKeyDown={onKeyDown}
       />
       <button
         className="btn btn-outline-secondary"
         type="button"
         style={{ color: 'white', backgroundColor: 'blue' }}
         id="button-addon2"
-        onClick={onClicked}
+        onClick={() => onKeyDown({ key: 'Enter' })}
       >
         Go
       </button>

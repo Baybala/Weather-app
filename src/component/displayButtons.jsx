@@ -12,7 +12,7 @@ const DisplayButtons = ({ data, clicked, date }) => {
           key={item.date}
           className="col buttons"
           style={{ backgroundColor: colorValid }}
-          onClick={() => clicked(item.date)}
+          onClick={() => clicked('', item.date)}
         >
           <div>
             <img className="icomImg" src={item.iconPath} alt="weather Icon" />

@@ -1,14 +1,4 @@
-import axios from 'axios'
-
 const DetailedData = ({ data }) => {
-  const comp = async function () {
-    return await axios.get(
-      `http://api.openweathermap.org/data/2.5/forecast?lat=40.37&lon=49.83&appid=83ce2730c09f1d570400c729326561e4`,
-    )
-  }
-
-  comp()
-
   let keyMake = 1
   const columns = [
     {
